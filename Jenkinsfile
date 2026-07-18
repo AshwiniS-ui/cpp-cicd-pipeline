@@ -1,47 +1,90 @@
 pipeline {
     agent any
 
+    options {
+        timestamps()
+    }
+
     stages {
 
         stage('Checkout') {
             steps {
-                echo 'Checking out source code...'
                 checkout scm
+            }
+        }
+
+        stage('Verify Tools') {
+            steps {
+                bat '''
+                echo ===== Checking Tools =====
+
+                git --version
+                cmake --version
+
+                echo.
+                echo ===== Checking GCC =====
+                g++ --version
+
+                echo.
+                echo ===== GCC Location =====
+                where g++
+
+                echo.
+                echo ===== CMake Location =====
+                where cmake
+                '''
             }
         }
 
         stage('Build') {
             steps {
-
                 bat '''
+                if exist build (
+                    rmdir /s /q build
+                )
+
                 mkdir build
                 cd build
-                cmake ..
+
+                cmake -G "MinGW Makefiles" ..
+
                 cmake --build .
                 '''
-
             }
         }
 
-        stage('Test') {
+        stage('Run Application') {
             steps {
-                echo 'Running Unit Tests...'
+                bat '''
+                cd build
+
+                if exist calculator.exe (
+                    calculator.exe
+                ) else (
+                    echo Executable not found.
+                )
+                '''
             }
         }
 
     }
 
     post {
-        always {
-            echo 'Pipeline Finished'
-        }
 
         success {
-            echo 'Build Successful'
+            echo "======================================="
+            echo " BUILD SUCCESSFUL "
+            echo "======================================="
         }
 
         failure {
-            echo 'Build Failed'
+            echo "======================================="
+            echo " BUILD FAILED "
+            echo "======================================="
+        }
+
+        always {
+            echo "Pipeline Finished"
         }
     }
 }
