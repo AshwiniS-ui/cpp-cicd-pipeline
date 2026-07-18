@@ -12,7 +12,14 @@ pipeline {
 
         stage('Build') {
             steps {
-                echo 'Building C++ Project...'
+
+                bat '''
+                mkdir build
+                cd build
+                cmake ..
+                cmake --build .
+                '''
+
             }
         }
 
