@@ -58,8 +58,8 @@ pipeline {
                 bat '''
                 cd build
 
-                if exist calculator.exe (
-                    calculator.exe
+                if exist calculator_app.exe (
+                    calculator_app.exe
                 ) else (
                     echo Executable not found.
                 )
