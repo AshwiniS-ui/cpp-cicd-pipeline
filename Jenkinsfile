@@ -9,6 +9,7 @@ pipeline {
 
         stage('Checkout') {
             steps {
+                echo "Checking out source code from GitHub..."
                 checkout scm
             }
         }
@@ -16,22 +17,60 @@ pipeline {
         stage('Verify Tools') {
             steps {
                 bat '''
-                echo ===== Checking Tools =====
+                echo ===============================
+                echo VERIFYING BUILD TOOLS
+                echo ===============================
 
                 git --version
                 cmake --version
-
-                echo.
-                echo ===== Checking GCC =====
                 g++ --version
 
                 echo.
-                echo ===== GCC Location =====
+                echo Git Location
+                where git
+
+                echo.
+                echo GCC Location
                 where g++
 
                 echo.
-                echo ===== CMake Location =====
+                echo CMake Location
                 where cmake
+                '''
+            }
+        }
+
+        stage('Verify Conan') {
+            steps {
+                bat '''
+                echo ===============================
+                echo VERIFYING CONAN
+                echo ===============================
+
+                conan --version
+
+                echo.
+                where conan
+                '''
+            }
+        }
+
+        stage('Configure') {
+            steps {
+                bat '''
+                echo ===============================
+                echo CONFIGURING PROJECT
+                echo ===============================
+
+                if exist build (
+                    rmdir /s /q build
+                )
+
+                mkdir build
+
+                cd build
+
+                cmake -G "MinGW Makefiles" ..
                 '''
             }
         }
@@ -39,14 +78,11 @@ pipeline {
         stage('Build') {
             steps {
                 bat '''
-                if exist build (
-                    rmdir /s /q build
-                )
+                echo ===============================
+                echo BUILDING PROJECT
+                echo ===============================
 
-                mkdir build
                 cd build
-
-                cmake -G "MinGW Makefiles" ..
 
                 cmake --build .
                 '''
@@ -56,35 +92,50 @@ pipeline {
         stage('Run Application') {
             steps {
                 bat '''
+                echo ===============================
+                echo RUNNING APPLICATION
+                echo ===============================
+
                 cd build
 
-                if exist calculator_app.exe (
-                    calculator_app.exe
-                ) else (
-                    echo Executable not found.
-                )
+                calculator_app.exe
                 '''
             }
         }
 
+        stage('Package') {
+            steps {
+                bat '''
+                echo ===============================
+                echo PACKAGING APPLICATION
+                echo ===============================
+
+                if not exist artifacts (
+                    mkdir artifacts
+                )
+
+                copy build\\calculator_app.exe artifacts\\
+                '''
+            }
+        }
     }
 
     post {
 
         success {
-            echo "======================================="
-            echo " BUILD SUCCESSFUL "
-            echo "======================================="
+            echo "========================================="
+            echo "BUILD SUCCESSFUL"
+            echo "========================================="
         }
 
         failure {
-            echo "======================================="
-            echo " BUILD FAILED "
-            echo "======================================="
+            echo "========================================="
+            echo "BUILD FAILED"
+            echo "========================================="
         }
 
         always {
-            echo "Pipeline Finished"
+            echo "Pipeline Finished."
         }
     }
 }
