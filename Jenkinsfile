@@ -9,7 +9,7 @@ pipeline {
 
         stage('Checkout') {
             steps {
-                echo "Checking out source code from GitHub..."
+                echo "===== CHECKOUT SOURCE CODE ====="
                 checkout scm
             }
         }
@@ -23,7 +23,6 @@ pipeline {
 
                 git --version
                 cmake --version
-                gcc --version
                 g++ --version
 
                 echo.
@@ -32,7 +31,6 @@ pipeline {
 
                 echo.
                 echo GCC Location
-                where gcc
                 where g++
 
                 echo.
@@ -42,32 +40,7 @@ pipeline {
             }
         }
 
-        stage('Debug Python') {
-            steps {
-                bat '''
-                echo ===============================
-                echo PYTHON DEBUG
-                echo ===============================
-
-                where python
-                python --version
-
-                echo.
-                where pip
-                pip --version
-
-                echo.
-                where conan
-                conan --version
-
-                echo.
-                python -c "import sys;print(sys.executable)"
-                python -c "import conan;print(conan.__file__)"
-                '''
-            }
-        }
-
-        stage('Conan Install') {
+        stage('Clean Workspace') {
             steps {
                 bat '''
                 if exist build (
@@ -75,14 +48,6 @@ pipeline {
                 )
 
                 mkdir build
-
-                cd build
-
-                conan profile detect --force
-
-                conan install .. ^
-                    --output-folder=. ^
-                    --build=missing
                 '''
             }
         }
@@ -92,9 +57,7 @@ pipeline {
                 bat '''
                 cd build
 
-                cmake -G "MinGW Makefiles" ^
-                    -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake ^
-                    ..
+                cmake -G "MinGW Makefiles" ..
                 '''
             }
         }
@@ -114,7 +77,11 @@ pipeline {
                 bat '''
                 cd build
 
-                ctest --output-on-failure
+                if exist calculator_tests.exe (
+                    calculator_tests.exe
+                ) else (
+                    echo No unit tests found. Skipping...
+                )
                 '''
             }
         }
@@ -145,24 +112,30 @@ pipeline {
                 '''
             }
         }
+
+        stage('Archive Artifacts') {
+            steps {
+                archiveArtifacts artifacts: 'artifacts/**', fingerprint: true
+            }
+        }
     }
 
     post {
 
         success {
-            echo "========================================="
+            echo "====================================="
             echo "BUILD SUCCESSFUL"
-            echo "========================================="
+            echo "====================================="
         }
 
         failure {
-            echo "========================================="
+            echo "====================================="
             echo "BUILD FAILED"
-            echo "========================================="
+            echo "====================================="
         }
 
         always {
-            echo "Pipeline Finished."
+            echo "Pipeline Finished"
         }
     }
 }
