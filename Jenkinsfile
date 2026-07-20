@@ -146,4 +146,3 @@ stage('Unit Tests') {
             echo "Pipeline Finished."
         }
     }
-}
