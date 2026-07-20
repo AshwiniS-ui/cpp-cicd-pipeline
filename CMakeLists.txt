@@ -8,22 +8,42 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 include_directories(include)
 
-# Calculator library
+# ----------------------------
+# Calculator Library
+# ----------------------------
 add_library(calculator
     src/calculator.cpp
 )
 
 target_include_directories(calculator PUBLIC include)
 
-# Main application
+# ----------------------------
+# Main Application
+# ----------------------------
 add_executable(calculator_app
     src/main.cpp
 )
 
 target_link_libraries(calculator_app PRIVATE calculator)
 
-# Enable testing
+# ----------------------------
+# Testing
+# ----------------------------
 enable_testing()
 
-# Future Google Test
-# add_subdirectory(tests)
+find_package(GTest REQUIRED)
+
+add_executable(calculator_test
+    tests/calculator_test.cpp
+)
+
+target_link_libraries(calculator_test
+    PRIVATE
+    calculator
+    GTest::gtest
+    GTest::gtest_main
+)
+
+include(GoogleTest)
+
+gtest_discover_tests(calculator_test)

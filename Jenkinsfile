@@ -40,54 +40,60 @@ pipeline {
             }
         }
 
-        stage('Verify Conan') {
-            steps {
-                bat '''
-                echo ===============================
-                echo VERIFYING CONAN
-                echo ===============================
+        stage('Conan Install') {
+    steps {
+        bat '''
+        cd build
 
-                conan --version
+        conan profile detect --force
 
-                echo.
-                where conan
-                '''
-            }
-        }
+        conan install .. ^
+            --output-folder=. ^
+            --build=missing
+        '''
+    }
+}
 
         stage('Configure') {
-            steps {
-                bat '''
-                echo ===============================
-                echo CONFIGURING PROJECT
-                echo ===============================
+    steps {
+        bat '''
+        if exist build (
+            rmdir /s /q build
+        )
 
-                if exist build (
-                    rmdir /s /q build
-                )
+        mkdir build
 
-                mkdir build
+        cd build
 
-                cd build
+        conan profile detect --force
 
-                cmake -G "MinGW Makefiles" ..
-                '''
-            }
-        }
+        conan install .. --output-folder=. --build=missing
+
+        cmake -G "MinGW Makefiles" ^
+            -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake ^
+            ..
+        '''
+    }
+}
 
         stage('Build') {
-            steps {
-                bat '''
-                echo ===============================
-                echo BUILDING PROJECT
-                echo ===============================
+    steps {
+        bat '''
+        cd build
 
-                cd build
+        cmake --build .
+        '''
+    }
+}
+stage('Unit Tests') {
+    steps {
+        bat '''
+        cd build
 
-                cmake --build .
-                '''
-            }
-        }
+        ctest --output-on-failure
+        '''
+    }
+}
 
         stage('Run Application') {
             steps {
@@ -118,6 +124,8 @@ pipeline {
                 '''
             }
         }
+        
+}
     }
 
     post {
