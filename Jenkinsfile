@@ -23,6 +23,7 @@ pipeline {
 
                 git --version
                 cmake --version
+                gcc --version
                 g++ --version
 
                 echo.
@@ -31,6 +32,7 @@ pipeline {
 
                 echo.
                 echo GCC Location
+                where gcc
                 where g++
 
                 echo.
@@ -40,71 +42,94 @@ pipeline {
             }
         }
 
+        stage('Debug Python') {
+            steps {
+                bat '''
+                echo ===============================
+                echo PYTHON DEBUG
+                echo ===============================
+
+                where python
+                python --version
+
+                echo.
+                where pip
+                pip --version
+
+                echo.
+                where conan
+                conan --version
+
+                echo.
+                python -c "import sys;print(sys.executable)"
+                python -c "import conan;print(conan.__file__)"
+                '''
+            }
+        }
+
         stage('Conan Install') {
-    steps {
-        bat '''
-        cd build
+            steps {
+                bat '''
+                if exist build (
+                    rmdir /s /q build
+                )
 
-        conan profile detect --force
+                mkdir build
 
-        conan install .. ^
-            --output-folder=. ^
-            --build=missing
-        '''
-    }
-}
+                cd build
+
+                conan profile detect --force
+
+                conan install .. ^
+                    --output-folder=. ^
+                    --build=missing
+                '''
+            }
+        }
 
         stage('Configure') {
-    steps {
-        bat '''
-        if exist build (
-            rmdir /s /q build
-        )
+            steps {
+                bat '''
+                cd build
 
-        mkdir build
-
-        cd build
-
-        conan profile detect --force
-
-        conan install .. --output-folder=. --build=missing
-
-        cmake -G "MinGW Makefiles" ^
-            -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake ^
-            ..
-        '''
-    }
-}
+                cmake -G "MinGW Makefiles" ^
+                    -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake ^
+                    ..
+                '''
+            }
+        }
 
         stage('Build') {
-    steps {
-        bat '''
-        cd build
+            steps {
+                bat '''
+                cd build
 
-        cmake --build .
-        '''
-    }
-}
-stage('Unit Tests') {
-    steps {
-        bat '''
-        cd build
+                cmake --build .
+                '''
+            }
+        }
 
-        ctest --output-on-failure
-        '''
-    }
-}
+        stage('Unit Tests') {
+            steps {
+                bat '''
+                cd build
+
+                ctest --output-on-failure
+                '''
+            }
+        }
 
         stage('Run Application') {
             steps {
                 bat '''
-                echo ===============================
-                echo RUNNING APPLICATION
-                echo ===============================
-
                 cd build
 
-                calculator_app.exe
+                if exist calculator_app.exe (
+                    calculator_app.exe
+                ) else (
+                    echo calculator_app.exe not found.
+                    exit /b 1
+                )
                 '''
             }
         }
@@ -112,10 +137,6 @@ stage('Unit Tests') {
         stage('Package') {
             steps {
                 bat '''
-                echo ===============================
-                echo PACKAGING APPLICATION
-                echo ===============================
-
                 if not exist artifacts (
                     mkdir artifacts
                 )
@@ -124,8 +145,6 @@ stage('Unit Tests') {
                 '''
             }
         }
-        
-}
     }
 
     post {
@@ -146,3 +165,4 @@ stage('Unit Tests') {
             echo "Pipeline Finished."
         }
     }
+}
