@@ -18,44 +18,25 @@ pipeline {
         }
 
         stage('Verify Tools') {
-    steps {
-        bat '''
-        echo ===== VERIFY =====
+            steps {
+                bat '''
+                where python
+                python --version
 
-        echo.
-        echo Python
-        where python
-        python --version
+                where conan
+                conan --version
 
-        echo.
-        echo Conan
-        where conan
+                where gcc
+                gcc --version
 
-        echo.
-        python -c "import sys; print(sys.executable)"
-        python -c "import site; print(site.getusersitepackages())"
+                where g++
+                g++ --version
 
-        echo.
-        python -m pip show conan
-
-        echo.
-        python -c "import conan; print(conan.__file__)"
-
-        echo.
-        conan --version
-
-        echo.
-        echo GCC
-        where gcc
-        gcc --version
-
-        echo.
-        echo G++
-        where g++
-        g++ --version
-        '''
-    }
-}
+                where cmake
+                cmake --version
+                '''
+            }
+        }
 
         stage('Clean') {
             steps {
@@ -86,9 +67,9 @@ pipeline {
                 cd build
 
                 cmake ^
-                  -G "MinGW Makefiles" ^
-                  -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake ^
-                  ..
+                -G "MinGW Makefiles" ^
+                -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake ^
+                ..
                 '''
             }
         }
@@ -127,11 +108,11 @@ pipeline {
                 copy build\\calculator_app.exe artifacts\\
                 '''
             }
-        }Archive') {
-            ste
+        }
 
-        stage('ps {
-                archiveArtifacts artifacts: 'artifacts/*', fingerprint: true
+        stage('Archive') {
+            steps {
+                archiveArtifacts artifacts: 'artifacts/*'
             }
         }
     }
@@ -139,15 +120,6 @@ pipeline {
     post {
         always {
             echo "Pipeline Finished"
-        }
-
-        success {
-            echo "BUILD SUCCESSFUL"
-        }
-
-        failure {
-
-            echo "BUILD FAILED"
         }
     }
 }
