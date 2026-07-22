@@ -18,24 +18,44 @@ pipeline {
         }
 
         stage('Verify Tools') {
-            steps {
-                bat '''
-                echo ===== VERIFY TOOLS =====
+    steps {
+        bat '''
+        echo ===== VERIFY =====
 
-                where g++
-                g++ --version
+        echo.
+        echo Python
+        where python
+        python --version
 
-                where gcc
-                gcc --version
+        echo.
+        echo Conan
+        where conan
 
-                where cmake
-                cmake --version
+        echo.
+        python -c "import sys; print(sys.executable)"
+        python -c "import site; print(site.getusersitepackages())"
 
-                where conan
-                conan --version
-                '''
-            }
-        }
+        echo.
+        python -m pip show conan
+
+        echo.
+        python -c "import conan; print(conan.__file__)"
+
+        echo.
+        conan --version
+
+        echo.
+        echo GCC
+        where gcc
+        gcc --version
+
+        echo.
+        echo G++
+        where g++
+        g++ --version
+        '''
+    }
+}
 
         stage('Clean') {
             steps {
@@ -107,10 +127,10 @@ pipeline {
                 copy build\\calculator_app.exe artifacts\\
                 '''
             }
-        }
+        }Archive') {
+            ste
 
-        stage('Archive') {
-            steps {
+        stage('ps {
                 archiveArtifacts artifacts: 'artifacts/*', fingerprint: true
             }
         }
@@ -126,7 +146,7 @@ pipeline {
         }
 
         failure {
-            
+
             echo "BUILD FAILED"
         }
     }
