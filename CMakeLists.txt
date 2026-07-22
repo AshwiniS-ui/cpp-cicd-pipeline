@@ -31,7 +31,7 @@ target_link_libraries(calculator_app PRIVATE calculator)
 # ----------------------------
 enable_testing()
 
-find_package(GTest REQUIRED)
+find_package(GTest CONFIG REQUIRED)
 
 add_executable(calculator_test
     tests/calculator_test.cpp

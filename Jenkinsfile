@@ -5,11 +5,14 @@ pipeline {
         timestamps()
     }
 
+    environment {
+        PATH = "C:\\MinGW\\bin;C:\\Users\\Ashwini S\\AppData\\Roaming\\Python\\Python39\\Scripts;${env.PATH}"
+    }
+
     stages {
 
         stage('Checkout') {
             steps {
-                echo "===== CHECKOUT SOURCE CODE ====="
                 checkout scm
             }
         }
@@ -17,37 +20,42 @@ pipeline {
         stage('Verify Tools') {
             steps {
                 bat '''
-                echo ===============================
-                echo VERIFYING BUILD TOOLS
-                echo ===============================
+                echo ===== VERIFY TOOLS =====
 
-                git --version
-                cmake --version
+                where g++
                 g++ --version
 
-                echo.
-                echo Git Location
-                where git
+                where gcc
+                gcc --version
 
-                echo.
-                echo GCC Location
-                where g++
-
-                echo.
-                echo CMake Location
                 where cmake
+                cmake --version
+
+                where conan
+                conan --version
                 '''
             }
         }
 
-        stage('Clean Workspace') {
+        stage('Clean') {
             steps {
                 bat '''
-                if exist build (
-                    rmdir /s /q build
-                )
-
+                if exist build rmdir /s /q build
                 mkdir build
+                '''
+            }
+        }
+
+        stage('Conan Install') {
+            steps {
+                bat '''
+                cd build
+
+                conan profile detect --force
+
+                conan install .. ^
+                    --output-folder=. ^
+                    --build=missing
                 '''
             }
         }
@@ -57,7 +65,10 @@ pipeline {
                 bat '''
                 cd build
 
-                cmake -G "MinGW Makefiles" ..
+                cmake ^
+                  -G "MinGW Makefiles" ^
+                  -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake ^
+                  ..
                 '''
             }
         }
@@ -66,37 +77,25 @@ pipeline {
             steps {
                 bat '''
                 cd build
-
                 cmake --build .
                 '''
             }
         }
 
-        stage('Unit Tests') {
+        stage('Test') {
             steps {
                 bat '''
                 cd build
-
-                if exist calculator_tests.exe (
-                    calculator_tests.exe
-                ) else (
-                    echo No unit tests found. Skipping...
-                )
+                ctest --output-on-failure
                 '''
             }
         }
 
-        stage('Run Application') {
+        stage('Run') {
             steps {
                 bat '''
                 cd build
-
-                if exist calculator_app.exe (
-                    calculator_app.exe
-                ) else (
-                    echo calculator_app.exe not found.
-                    exit /b 1
-                )
+                calculator_app.exe
                 '''
             }
         }
@@ -104,38 +103,30 @@ pipeline {
         stage('Package') {
             steps {
                 bat '''
-                if not exist artifacts (
-                    mkdir artifacts
-                )
-
+                if not exist artifacts mkdir artifacts
                 copy build\\calculator_app.exe artifacts\\
                 '''
             }
         }
 
-        stage('Archive Artifacts') {
+        stage('Archive') {
             steps {
-                archiveArtifacts artifacts: 'artifacts/**', fingerprint: true
+                archiveArtifacts artifacts: 'artifacts/*', fingerprint: true
             }
         }
     }
 
     post {
+        always {
+            echo "Pipeline Finished"
+        }
 
         success {
-            echo "====================================="
             echo "BUILD SUCCESSFUL"
-            echo "====================================="
         }
 
         failure {
-            echo "====================================="
             echo "BUILD FAILED"
-            echo "====================================="
-        }
-
-        always {
-            echo "Pipeline Finished"
         }
     }
 }
